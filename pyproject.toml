@@ -15,6 +15,8 @@ dependencies = [
     "anthropic",
     "openai",
     "google-generativeai",
+    "sentencepiece",
+    "tiktoken",
 ]
 
 [dependency-groups]

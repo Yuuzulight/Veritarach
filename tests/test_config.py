@@ -34,6 +34,12 @@ def test_defaults_applied_when_only_keys_are_set(monkeypatch):
     assert settings.gemini_model == "gemini-flash-latest"
     assert settings.hc3_sample_limit is None
     assert settings.wikipedia_sample_count == 500
+    assert settings.gemini_request_delay_seconds == 4.0
+    assert settings.base_model == "microsoft/deberta-v3-base"
+    assert settings.training_max_length == 256
+    assert settings.training_num_epochs == 3
+    assert settings.training_batch_size == 16
+    assert settings.training_learning_rate == 2e-5
 
 
 def test_data_dir_accepts_path_override(monkeypatch, tmp_path):

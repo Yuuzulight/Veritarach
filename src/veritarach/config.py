@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     # documented). Firing requests back-to-back with no pacing burned through the real quota in
     # 18 calls (confirmed 2026-08-12); raise this if that still trips, or check the dashboard.
 
+    base_model: str = "microsoft/deberta-v3-base"
+    training_max_length: int = 256  # covers the bulk of HC3/generated text without excess padding
+    training_num_epochs: int = 3
+    training_batch_size: int = 16
+    training_learning_rate: float = 2e-5
+
 
 def get_settings() -> Settings:
     return Settings()
