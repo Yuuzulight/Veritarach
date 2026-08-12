@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
@@ -27,6 +28,18 @@ def train_model(
     val_ds = tokenize_dataset(load_split(data_dir / "val.jsonl"), tokenizer, max_length)
     test_ds = tokenize_dataset(load_split(data_dir / "test.jsonl"), tokenizer, max_length)
 
+    # Confirmed on a real GPU run (2026-08-13): without warmup, loss collapsed to exactly 0
+    # by step 100 (logits exploding to +/-inf -- cross-entropy saturates to a displayed 0 in
+    # that regime) and eval_loss came back nan at epoch end. Reproduced identically in both
+    # bf16 and fp32, ruling out precision as the cause -- it's the freshly-initialized
+    # classification head getting hit with the full LR from step 1. Ramping the LR up over
+    # the first 10% of steps fixes this. This transformers version (5.15.0, confirmed via
+    # the installed signature) only accepts warmup_steps, not the more common warmup_ratio,
+    # so it's computed here from the actual step count rather than passed as a fraction.
+    steps_per_epoch = math.ceil(len(train_ds) / batch_size)
+    total_steps = steps_per_epoch * num_epochs
+    warmup_steps = round(total_steps * 0.1)
+
     args = TrainingArguments(
         output_dir=str(output_dir),
         num_train_epochs=num_epochs,
@@ -40,15 +53,9 @@ def train_model(
         logging_steps=50,
         report_to=[],
         dataloader_num_workers=4,
-        # Confirmed on a real GPU run (2026-08-13): without warmup, loss collapsed to
-        # exactly 0 by step 100 (logits exploding to +/-inf -- cross-entropy saturates to a
-        # displayed 0 in that regime) and eval_loss came back nan at epoch end. This
-        # reproduced identically in both bf16 and fp32, ruling out precision as the cause --
-        # it's the freshly-initialized classification head getting hit with the full LR from
-        # step 1. warmup_ratio ramps the LR up gradually instead. max_grad_norm is already
-        # the Trainer default (1.0); set explicitly since clipping alone wasn't sufficient
-        # here without warmup too.
-        warmup_ratio=0.1,
+        warmup_steps=warmup_steps,
+        # max_grad_norm is already the Trainer default (1.0); set explicitly since clipping
+        # alone wasn't sufficient here without warmup too.
         max_grad_norm=1.0,
     )
 
