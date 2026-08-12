@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
 from veritarach.training.dataset import ID_TO_LABEL, LABEL_TO_ID, load_split, tokenize_dataset
@@ -40,10 +39,10 @@ def train_model(
         metric_for_best_model="f1",
         logging_steps=50,
         report_to=[],
-        # bf16 roughly halves training time on GPUs with tensor-core support (RTX 4090
-        # included) for negligible accuracy cost. Gated on CUDA so CPU runs (e.g. the local
-        # smoke test) aren't forced into a slower/unsupported path.
-        bf16=torch.cuda.is_available(),
+        # bf16 was tried for speed but produced NaN eval_loss / zero F1 on a real GPU run
+        # (2026-08-13) -- DeBERTa-v3's disentangled attention has documented numerical
+        # stability issues under reduced precision. Reverted to fp32; the time budget here
+        # comfortably absorbs the ~2x slower training, correctness matters more than speed.
         dataloader_num_workers=4,
     )
 
