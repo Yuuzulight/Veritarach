@@ -28,14 +28,16 @@ def train_model(
     val_ds = tokenize_dataset(load_split(data_dir / "val.jsonl"), tokenizer, max_length)
     test_ds = tokenize_dataset(load_split(data_dir / "test.jsonl"), tokenizer, max_length)
 
-    # Confirmed on a real GPU run (2026-08-13): without warmup, loss collapsed to exactly 0
-    # by step 100 (logits exploding to +/-inf -- cross-entropy saturates to a displayed 0 in
-    # that regime) and eval_loss came back nan at epoch end. Reproduced identically in both
-    # bf16 and fp32, ruling out precision as the cause -- it's the freshly-initialized
-    # classification head getting hit with the full LR from step 1. Ramping the LR up over
-    # the first 10% of steps fixes this. This transformers version (5.15.0, confirmed via
-    # the installed signature) only accepts warmup_steps, not the more common warmup_ratio,
-    # so it's computed here from the actual step count rather than passed as a fraction.
+    # On a real GPU run (2026-08-13): loss reads a normal ~0.34-0.36 at step 50, then
+    # collapses to exactly 0 at every subsequent logged step (logits exploding to +/-inf --
+    # cross-entropy saturates to a displayed 0 in that regime), and eval_loss comes back nan
+    # at epoch end. Reproduced identically across bf16, fp32, and fp32+warmup -- ruling out
+    # both precision and an unwarmed classification head as the sole cause. Training data
+    # itself checked clean (no empty/malformed rows). The one untested variable common to
+    # every failing attempt: dataloader_num_workers=4, added in the same original change as
+    # bf16. Multi-worker loading with a fast tokenizer has known fork-safety issues on Linux
+    # that can silently hand back corrupted batches rather than crash outright -- removed
+    # here as the next thing to isolate, not yet a confirmed root cause.
     steps_per_epoch = math.ceil(len(train_ds) / batch_size)
     total_steps = steps_per_epoch * num_epochs
     warmup_steps = round(total_steps * 0.1)
@@ -52,10 +54,8 @@ def train_model(
         metric_for_best_model="f1",
         logging_steps=50,
         report_to=[],
-        dataloader_num_workers=4,
         warmup_steps=warmup_steps,
-        # max_grad_norm is already the Trainer default (1.0); set explicitly since clipping
-        # alone wasn't sufficient here without warmup too.
+        # max_grad_norm is already the Trainer default (1.0); set explicitly for clarity.
         max_grad_norm=1.0,
     )
 
