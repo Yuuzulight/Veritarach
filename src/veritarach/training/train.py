@@ -1,6 +1,7 @@
 import math
 from pathlib import Path
 
+import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
 
 from veritarach.training.dataset import ID_TO_LABEL, LABEL_TO_ID, load_split, tokenize_dataset
@@ -20,18 +21,25 @@ def train_model(
     train/val/test.jsonl (as produced by build_dataset.py). Saves the best checkpoint
     (by validation F1) to output_dir/final. Returns the test-set metrics."""
     tokenizer = AutoTokenizer.from_pretrained(base_model)
-    # On a real GPU run (2026-08-13): grad_norm was already nan at the very first logged
-    # step (step 50), even though the forward-pass loss still showed a plausible number --
-    # ruling out precision (bf16/fp32), warmup, and dataloader_num_workers, none of which
-    # can make gradients NaN this immediately since they only affect update magnitude, not
-    # whether the backward pass itself produces NaN. Training data confirmed clean. This
-    # points to DeBERTa-v3's non-standard disentangled attention hitting a bug in whichever
-    # optimized/fused attention kernel this transformers version auto-selects -- forcing the
-    # original eager implementation is the standard escape hatch for exactly this failure
-    # mode (custom attention architectures are the ones most likely to have kernel-specific
-    # bugs, since optimized kernels are usually validated against standard QK^T attention).
+    # ROOT CAUSE, confirmed by direct inspection (2026-08-13): from_pretrained() was loading
+    # this checkpoint's weights in float16 by default -- e.g. classifier.bias came back as
+    # dtype=torch.float16 -- completely independent of TrainingArguments' bf16 flag, which
+    # only controls autocast during compute, not the underlying weight storage dtype. This
+    # explains why every precision-related attempt (bf16, "fp32" via bf16=False, warmup,
+    # dataloader_num_workers, eager attention) failed identically: the actual stored weights
+    # were fp16 in every single one of them. fp16's narrow dynamic range is a well-known
+    # cause of exactly the symptom seen (grad_norm already nan by the first logged step) for
+    # models like DeBERTa-v3, and none of those attempts used fp16's required loss-scaling
+    # (TrainingArguments(fp16=True)), so nothing was protecting against it. dtype=torch.float32
+    # forces genuine fp32 weight storage; verified directly after this fix that
+    # classifier.bias.dtype reports torch.float32, not float16.
     model = AutoModelForSequenceClassification.from_pretrained(
-        base_model, num_labels=2, id2label=ID_TO_LABEL, label2id=LABEL_TO_ID, attn_implementation="eager"
+        base_model,
+        num_labels=2,
+        id2label=ID_TO_LABEL,
+        label2id=LABEL_TO_ID,
+        attn_implementation="eager",
+        dtype=torch.float32,
     )
 
     train_ds = tokenize_dataset(load_split(data_dir / "train.jsonl"), tokenizer, max_length)
