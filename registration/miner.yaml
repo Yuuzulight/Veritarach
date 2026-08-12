@@ -1,0 +1,11 @@
+# Stub — see registration/README.md for what's blocking each field below.
+
+supported_intents:
+  - AI_DETECTION        # Not yet confirmed on the hackathon's curated Intent list.
+                         # Fallback if excluded: TEXT_AUTHENTICITY_CHECK or CONTENT_VERIFICATION
+                         # (no model changes needed either way).
+
+node_address: null       # Blocked — need to request in Discord (not yet asked).
+x_internal_secret: null  # Blocked — same ask as node_address.
+endpoint: null            # Filled in once the service is deployed.
+intent_version: null      # Unconfirmed whether an explicit @v1.0 suffix is required.
