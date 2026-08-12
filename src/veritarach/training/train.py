@@ -39,11 +39,17 @@ def train_model(
         metric_for_best_model="f1",
         logging_steps=50,
         report_to=[],
-        # bf16 was tried for speed but produced NaN eval_loss / zero F1 on a real GPU run
-        # (2026-08-13) -- DeBERTa-v3's disentangled attention has documented numerical
-        # stability issues under reduced precision. Reverted to fp32; the time budget here
-        # comfortably absorbs the ~2x slower training, correctness matters more than speed.
         dataloader_num_workers=4,
+        # Confirmed on a real GPU run (2026-08-13): without warmup, loss collapsed to
+        # exactly 0 by step 100 (logits exploding to +/-inf -- cross-entropy saturates to a
+        # displayed 0 in that regime) and eval_loss came back nan at epoch end. This
+        # reproduced identically in both bf16 and fp32, ruling out precision as the cause --
+        # it's the freshly-initialized classification head getting hit with the full LR from
+        # step 1. warmup_ratio ramps the LR up gradually instead. max_grad_norm is already
+        # the Trainer default (1.0); set explicitly since clipping alone wasn't sufficient
+        # here without warmup too.
+        warmup_ratio=0.1,
+        max_grad_norm=1.0,
     )
 
     trainer = Trainer(
