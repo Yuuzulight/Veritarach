@@ -20,24 +20,24 @@ def train_model(
     train/val/test.jsonl (as produced by build_dataset.py). Saves the best checkpoint
     (by validation F1) to output_dir/final. Returns the test-set metrics."""
     tokenizer = AutoTokenizer.from_pretrained(base_model)
+    # On a real GPU run (2026-08-13): grad_norm was already nan at the very first logged
+    # step (step 50), even though the forward-pass loss still showed a plausible number --
+    # ruling out precision (bf16/fp32), warmup, and dataloader_num_workers, none of which
+    # can make gradients NaN this immediately since they only affect update magnitude, not
+    # whether the backward pass itself produces NaN. Training data confirmed clean. This
+    # points to DeBERTa-v3's non-standard disentangled attention hitting a bug in whichever
+    # optimized/fused attention kernel this transformers version auto-selects -- forcing the
+    # original eager implementation is the standard escape hatch for exactly this failure
+    # mode (custom attention architectures are the ones most likely to have kernel-specific
+    # bugs, since optimized kernels are usually validated against standard QK^T attention).
     model = AutoModelForSequenceClassification.from_pretrained(
-        base_model, num_labels=2, id2label=ID_TO_LABEL, label2id=LABEL_TO_ID
+        base_model, num_labels=2, id2label=ID_TO_LABEL, label2id=LABEL_TO_ID, attn_implementation="eager"
     )
 
     train_ds = tokenize_dataset(load_split(data_dir / "train.jsonl"), tokenizer, max_length)
     val_ds = tokenize_dataset(load_split(data_dir / "val.jsonl"), tokenizer, max_length)
     test_ds = tokenize_dataset(load_split(data_dir / "test.jsonl"), tokenizer, max_length)
 
-    # On a real GPU run (2026-08-13): loss reads a normal ~0.34-0.36 at step 50, then
-    # collapses to exactly 0 at every subsequent logged step (logits exploding to +/-inf --
-    # cross-entropy saturates to a displayed 0 in that regime), and eval_loss comes back nan
-    # at epoch end. Reproduced identically across bf16, fp32, and fp32+warmup -- ruling out
-    # both precision and an unwarmed classification head as the sole cause. Training data
-    # itself checked clean (no empty/malformed rows). The one untested variable common to
-    # every failing attempt: dataloader_num_workers=4, added in the same original change as
-    # bf16. Multi-worker loading with a fast tokenizer has known fork-safety issues on Linux
-    # that can silently hand back corrupted batches rather than crash outright -- removed
-    # here as the next thing to isolate, not yet a confirmed root cause.
     steps_per_epoch = math.ceil(len(train_ds) / batch_size)
     total_steps = steps_per_epoch * num_epochs
     warmup_steps = round(total_steps * 0.1)
