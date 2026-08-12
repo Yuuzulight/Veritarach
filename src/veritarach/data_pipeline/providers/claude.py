@@ -17,9 +17,10 @@ class ClaudeProvider:
         self._model = settings.claude_model
 
     def generate(self, prompt: str) -> str:
-        """Calls the provider SDK. On a rate-limit error, retries up to MAX_ATTEMPTS
-        times with manual exponential backoff. Raises ProviderError if every attempt
-        fails."""
+        """Calls the provider SDK. On a rate-limit or transient server error (5xx,
+        including the "Overloaded" 529 Anthropic explicitly documents as retry-worthy),
+        retries up to MAX_ATTEMPTS times with manual exponential backoff. Raises
+        ProviderError if every attempt fails."""
         last_error: Exception | None = None
         for attempt in range(MAX_ATTEMPTS):
             try:
@@ -29,7 +30,7 @@ class ClaudeProvider:
                     messages=[{"role": "user", "content": prompt}],
                 )
                 return response.content[0].text
-            except anthropic.RateLimitError as exc:
+            except (anthropic.RateLimitError, anthropic.InternalServerError) as exc:
                 last_error = exc
                 if attempt < MAX_ATTEMPTS - 1:
                     time.sleep(2**attempt)

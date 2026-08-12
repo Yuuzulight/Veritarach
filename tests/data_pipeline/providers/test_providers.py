@@ -25,6 +25,20 @@ def _openai_rate_limit_error():
     return openai.RateLimitError("rate limited", response=response, body=None)
 
 
+def _anthropic_overloaded_error():
+    # Mirrors the real 529 "Overloaded" error Anthropic's own docs say is retry-worthy --
+    # confirmed as a real failure mode in production (2026-08-12), not hypothetical.
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(529, request=request)
+    return anthropic.InternalServerError("overloaded", response=response, body=None)
+
+
+def _openai_server_error():
+    request = httpx.Request("POST", "https://api.openai.com/v1/chat/completions")
+    response = httpx.Response(500, request=request)
+    return openai.InternalServerError("internal server error", response=response, body=None)
+
+
 def _gemini_rate_limit_error():
     return ResourceExhausted("rate limited")
 
@@ -68,6 +82,20 @@ class TestClaudeProvider:
             ClaudeProvider(test_settings).generate("say hi")
 
         assert mock_client.messages.create.call_count == 3
+
+    @patch("veritarach.data_pipeline.providers.claude.time.sleep")
+    @patch("veritarach.data_pipeline.providers.claude.anthropic.Anthropic")
+    def test_generate_retries_on_overloaded_error_then_succeeds(self, mock_anthropic_cls, mock_sleep, test_settings):
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text="succeeded on retry")]
+        mock_client.messages.create.side_effect = [_anthropic_overloaded_error(), mock_response]
+        mock_anthropic_cls.return_value = mock_client
+
+        result = ClaudeProvider(test_settings).generate("say hi")
+
+        assert result == "succeeded on retry"
+        assert mock_client.messages.create.call_count == 2
 
     @patch("veritarach.data_pipeline.providers.claude.anthropic.Anthropic")
     def test_generate_does_not_retry_non_rate_limit_errors(self, mock_anthropic_cls, test_settings):
@@ -120,6 +148,20 @@ class TestOpenAIProvider:
             OpenAIProvider(test_settings).generate("say hi")
 
         assert mock_client.chat.completions.create.call_count == 3
+
+    @patch("veritarach.data_pipeline.providers.openai_gpt.time.sleep")
+    @patch("veritarach.data_pipeline.providers.openai_gpt.openai.OpenAI")
+    def test_generate_retries_on_server_error_then_succeeds(self, mock_openai_cls, mock_sleep, test_settings):
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="succeeded on retry"))]
+        mock_client.chat.completions.create.side_effect = [_openai_server_error(), mock_response]
+        mock_openai_cls.return_value = mock_client
+
+        result = OpenAIProvider(test_settings).generate("say hi")
+
+        assert result == "succeeded on retry"
+        assert mock_client.chat.completions.create.call_count == 2
 
 
 class TestGeminiProvider:
