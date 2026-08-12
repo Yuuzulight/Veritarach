@@ -31,7 +31,7 @@ def test_defaults_applied_when_only_keys_are_set(monkeypatch):
     assert settings.paired_ratio == 0.7
     assert settings.claude_model == "claude-sonnet-5"
     assert settings.openai_model == "gpt-4o"
-    assert settings.gemini_model == "gemini-2.0-flash"
+    assert settings.gemini_model == "gemini-2.5-flash"
     assert settings.hc3_sample_limit is None
     assert settings.wikipedia_sample_count == 500
 
