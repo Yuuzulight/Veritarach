@@ -20,11 +20,20 @@ class Settings(BaseSettings):
 
     claude_model: str = "claude-sonnet-5"
     openai_model: str = "gpt-4o"  # confirmed still current: $2.50/$10 per MTok in/out (2026-08-12)
-    gemini_model: str = "gemini-2.5-flash"  # gemini-2.0-flash was shut down 2026-06-01; this is
-    # its confirmed current replacement, with the same free tier (2026-08-12)
+    gemini_model: str = "gemini-flash-latest"  # gemini-2.0-flash was shut down 2026-06-01;
+    # gemini-2.5-flash (its replacement) turned out to be listed but blocked for new API keys
+    # ("no longer available to new users", confirmed via a real 404 on this exact key,
+    # 2026-08-12) -- using Google's own "latest" alias instead of a pinned version avoids
+    # hardcoding into the next one of these that turns up.
 
     hc3_sample_limit: int | None = None  # cap for fast local dev; None = full dataset
     wikipedia_sample_count: int = 500  # oversample; build_dataset trims to match generated-sample count
+
+    gemini_request_delay_seconds: float = 4.0  # ~15 req/min pacing -- a conservative assumption,
+    # not a verified number. Free-tier RPM is account-specific and only shown in the user's own
+    # AI Studio dashboard (ai.google.dev/gemini-api/docs/rate-limits confirms this isn't publicly
+    # documented). Firing requests back-to-back with no pacing burned through the real quota in
+    # 18 calls (confirmed 2026-08-12); raise this if that still trips, or check the dashboard.
 
 
 def get_settings() -> Settings:

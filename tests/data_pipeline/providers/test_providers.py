@@ -123,9 +123,10 @@ class TestOpenAIProvider:
 
 
 class TestGeminiProvider:
+    @patch("veritarach.data_pipeline.providers.gemini.time.sleep")
     @patch("veritarach.data_pipeline.providers.gemini.genai.GenerativeModel")
     @patch("veritarach.data_pipeline.providers.gemini.genai.configure")
-    def test_generate_returns_response_text(self, mock_configure, mock_model_cls, test_settings):
+    def test_generate_returns_response_text(self, mock_configure, mock_model_cls, mock_sleep, test_settings):
         mock_model = MagicMock()
         mock_model.generate_content.return_value = MagicMock(text="hello from gemini")
         mock_model_cls.return_value = mock_model
@@ -133,6 +134,8 @@ class TestGeminiProvider:
         result = GeminiProvider(test_settings).generate("say hi")
 
         assert result == "hello from gemini"
+        # Pacing must fire even on a clean success -- that's the whole point of the fix.
+        mock_sleep.assert_called_once_with(test_settings.gemini_request_delay_seconds)
 
     @patch("veritarach.data_pipeline.providers.gemini.time.sleep")
     @patch("veritarach.data_pipeline.providers.gemini.genai.GenerativeModel")
@@ -151,7 +154,8 @@ class TestGeminiProvider:
 
         assert result == "succeeded on retry"
         assert mock_model.generate_content.call_count == 2
-        mock_sleep.assert_called_once()
+        # 1 backoff sleep (failed attempt) + 1 pacing sleep (after the call finishes) = 2.
+        assert mock_sleep.call_count == 2
 
     @patch("veritarach.data_pipeline.providers.gemini.time.sleep")
     @patch("veritarach.data_pipeline.providers.gemini.genai.GenerativeModel")
@@ -167,6 +171,11 @@ class TestGeminiProvider:
             GeminiProvider(test_settings).generate("say hi")
 
         assert mock_model.generate_content.call_count == 3
+        # Pacing must still fire on total failure -- otherwise the *next* sample in the
+        # batch fires immediately into the same still-active rate limit, which is exactly
+        # what happened in production before this fix (every sample failed identically
+        # back-to-back once the quota was hit).
+        mock_sleep.assert_called_with(test_settings.gemini_request_delay_seconds)
 
 
 class TestFakeProvider:

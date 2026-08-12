@@ -42,7 +42,9 @@ def test_fetch_hc3_produces_one_pair_per_valid_row(mock_load_dataset, tmp_path):
     assert pairs[0].question == "What is the capital of France?"
     assert pairs[0].human_answer == "Paris is the capital of France."
     assert pairs[0].ai_answer == "The capital of France is Paris."
-    mock_load_dataset.assert_called_once_with("Hello-SimpleAI/HC3", "all_no_ttf", split="train")
+    mock_load_dataset.assert_called_once_with(
+        "Hello-SimpleAI/HC3", "default", split="train", revision="refs/convert/parquet"
+    )
 
 
 @patch("veritarach.data_pipeline.fetch_hc3.load_dataset")

@@ -15,10 +15,19 @@ class HC3Pair:
 
 
 def fetch_hc3(output_dir: Path, limit: int | None = None) -> list[HC3Pair]:
-    """Loads Hello-SimpleAI/HC3 (all_no_ttf config), writes output_dir/hc3_pairs.jsonl,
-    and returns the pairs. If limit is set, only the first `limit` valid pairs are kept
-    (for fast local dev — production runs pass limit=None)."""
-    dataset = load_dataset("Hello-SimpleAI/HC3", "all_no_ttf", split="train")
+    """Loads Hello-SimpleAI/HC3, writes output_dir/hc3_pairs.jsonl, and returns the pairs.
+    If limit is set, only the first `limit` valid pairs are kept (for fast local dev —
+    production runs pass limit=None).
+
+    Uses revision="refs/convert/parquet" (Hugging Face's auto-maintained Parquet mirror)
+    because the repo's native format is a legacy dataset loading script, which current
+    `datasets` versions refuse to execute at all (verified 2026-08-12 — a real, unrelated
+    breaking change upstream, not something wrong on our end). The parquet mirror only
+    exposes a single "default" config rather than the original "all_no_ttf" — same columns
+    (question/human_answers/chatgpt_answers), same row count as "all" (48,644 rows); the
+    no_ttf split-specific filtering doesn't survive the conversion, but our own blank-answer
+    filtering below covers the same underlying data-quality concern."""
+    dataset = load_dataset("Hello-SimpleAI/HC3", "default", split="train", revision="refs/convert/parquet")
 
     pairs: list[HC3Pair] = []
     saw_any_row = False
