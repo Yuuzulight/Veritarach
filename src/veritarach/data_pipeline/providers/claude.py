@@ -29,7 +29,10 @@ class ClaudeProvider:
                     max_tokens=1024,
                     messages=[{"role": "user", "content": prompt}],
                 )
-                return response.content[0].text
+                # claude-sonnet-5 runs adaptive thinking by default even with no `thinking`
+                # param set, so content[0] is sometimes a ThinkingBlock, not the text --
+                # pick the actual text block instead of assuming position 0.
+                return next(block.text for block in response.content if block.type == "text")
             except (anthropic.RateLimitError, anthropic.InternalServerError) as exc:
                 last_error = exc
                 if attempt < MAX_ATTEMPTS - 1:
