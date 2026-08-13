@@ -12,8 +12,8 @@ class Settings(BaseSettings):
 
     data_dir: Path = Path("data")
 
-    generation_budget_usd: float = 10.0
-    claude_sample_count: int = 75
+    generation_budget_usd: float = 15.0
+    claude_sample_count: int = 500
     gpt4o_sample_count: int = 75
     gemini_sample_count: int = 150
     paired_ratio: float = 0.7  # fraction of each provider's samples using the paired-HC3 strategy
@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     # hardcoding into the next one of these that turns up.
 
     hc3_sample_limit: int | None = None  # cap for fast local dev; None = full dataset
-    wikipedia_sample_count: int = 500  # oversample; build_dataset trims to match generated-sample count
+    wikipedia_sample_count: int = 650  # oversample; build_dataset trims to match generated-sample count
+    # (must stay above the total generated-sample pool -- 593 as of the last Claude top-up --
+    # since build_dataset trims Wikipedia down to match and never pads it up)
 
     gemini_request_delay_seconds: float = 4.0  # ~15 req/min pacing -- a conservative assumption,
     # not a verified number. Free-tier RPM is account-specific and only shown in the user's own
