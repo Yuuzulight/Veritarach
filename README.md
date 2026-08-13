@@ -2,11 +2,10 @@
 
 Veritarach is a fine-tuned DeBERTa-v3-base binary classifier that tells AI-generated text
 apart from human-written text. It's built to run as a Telegraph Protocol "Miner" serving the
-`AI_DETECTION` intent, for Telegraph Hackathon Season 1 (Miner Track).
+`AI_TEXT_DETECTION` intent, for Telegraph Hackathon Season 1 (Miner Track).
 
-**Status: early scaffold.** The repo structure, data pipeline, and service skeleton are in
-place; model training and protocol registration haven't happened yet (see Roadmap below for
-what's blocking each).
+**Status: live.** The classifier hits 99.65% test F1 on a held-out split, is deployed as a
+real HTTPS service, and is registered and active as a Telegraph Miner. See Roadmap below.
 
 ## Why a fresh model instead of an existing detector
 
@@ -68,14 +67,30 @@ when you actually run it — nothing in the test suite touches the live APIs.
 pytest
 ```
 
+## Running the service
+
+`/predict` lazily loads the checkpoint from `data/model/final/` on first request (that
+directory is gitignored — train locally or drop a checkpoint in before running):
+
+```bash
+uv run uvicorn veritarach.service.app:app --reload
+curl -X POST localhost:8000/predict -H "content-type: application/json" \
+  -d '{"text": "some text to classify"}'
+```
+
+If no checkpoint is present, `/predict` returns 501 instead of crashing — that's the
+expected state in CI, since the trained weights are never committed.
+
+A `Dockerfile` is included for containerized deployment.
+
 ## Roadmap
 
-1. **Data pipeline** (in progress) — fetch HC3 + Wikipedia, generate modern-LLM samples,
-   assemble the training set.
-2. **Model training** — blocked on setting up a GPU rental account (Vast.ai); not needed
-   until the dataset is ready.
-3. **Service** (skeleton in progress) — FastAPI app; `/predict` returns 501 until a trained
-   model is wired in.
-4. **Protocol registration** — blocked on a few open questions in the Telegraph Discord
-   (which Intent the hackathon's curated list actually includes, the node secret, where to
-   get testnet MACHINA). See `registration/README.md` for the current state of each.
+1. **Data pipeline** — done. HC3 + Wikipedia + self-generated samples (Claude/GPT-4o/Gemini)
+   assembled into a 96.6k-row training set.
+2. **Model training** — done. Fine-tuned on a rented cloud GPU; 99.65% test F1.
+3. **Service** — done. FastAPI app with a real `/predict`, backed by the trained checkpoint.
+4. **Deployment** — done. Live on a DigitalOcean droplet behind Caddy, real HTTPS via Let's
+   Encrypt.
+5. **Protocol registration** — done. Registered as a Telegraph Miner for the
+   `AI_TEXT_DETECTION` intent and confirmed active. See `registration/README.md` for the
+   full flow.

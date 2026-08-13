@@ -1,11 +1,47 @@
-# Stub — see registration/README.md for what's blocking each field below.
+# Real schema per docs.telegraphprotocol.com/miners/yaml-config.md (2026-08-13).
+# REGISTERED AND ACTIVE as of 2026-08-13 via integrate.telegraphprotocol.com -- confirmed
+# directly against the node's own /miner-dispatcher/integrations endpoint, not just the
+# UI's success message. See registration/README.md for the full flow.
 
-supported_intents:
-  - AI_DETECTION        # Not yet confirmed on the hackathon's curated Intent list.
-                         # Fallback if excluded: TEXT_AUTHENTICITY_CHECK or CONTENT_VERIFICATION
-                         # (no model changes needed either way).
+version: "1"
+kind: miner
+id: 708425                # Random 6-digit ID -- other miners we've seen in Discord examples
+                          # pick small sequential-looking numbers (18, 26, 34...), so a
+                          # random 6-digit number is a low-collision-risk choice. No lookup
+                          # endpoint exists to verify in advance -- register-and-see; if it
+                          # collides, the registration errors and we just pick a new one.
+slug: veritarach-ai-text-detector
+protocol: generic        # not a Bittensor subnet wrapper -- our own FastAPI service.
+name: Veritarach AI Text Detector
+description: >
+  Fine-tuned DeBERTa-v3-base binary classifier distinguishing AI-generated from
+  human-written text. 99.65% test F1.
+base_url: https://157-230-241-156.sslip.io   # DigitalOcean droplet (Singapore), behind
+                                              # Caddy for automatic HTTPS via a real
+                                              # Let's Encrypt cert. Verified live 2026-08-13:
+                                              # /health and /predict both confirmed working
+                                              # end-to-end over the public URL.
 
-node_address: null       # Blocked — need to request in Discord (not yet asked).
-x_internal_secret: null  # Blocked — same ask as node_address.
-endpoint: null            # Filled in once the service is deployed.
-intent_version: null      # Unconfirmed whether an explicit @v1.0 suffix is required.
+auth:
+  type: none              # /predict has no auth -- open endpoint.
+
+endpoints:
+  - path: /predict
+    external_path: /predict
+    method: POST
+    description: Classify text as ai_generated or human_written with a confidence score.
+
+semantics:
+  signal_mapping:
+    label_field: label
+    confidence_field: confidence
+  supported_intents:
+    - AI_TEXT_DETECTION
+    # Confirmed valid -- the sandbox accepted it and the on-chain registration succeeded.
+    # yaml-config.md's general canonical list lists AI_DETECTION, not AI_TEXT_DETECTION,
+    # but that doc table just hadn't caught up with the hackathon-specific intents.
+
+# No on_chain block yet -- that's only needed for ERC-8183 job / x402 direct-payment
+# support, not for basic hackathon Track 1 registration. Add later if we want that path;
+# the exact transform_rule syntax for a string label field (vs. the boolean example in the
+# docs) isn't confirmed yet, so it's left out rather than guessed at.

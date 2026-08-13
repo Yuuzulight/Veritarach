@@ -1,0 +1,26 @@
+version: "1"
+kind: miner
+id: 708425
+slug: veritarach-ai-text-detector
+protocol: generic
+name: Veritarach AI Text Detector
+description: >
+  Fine-tuned DeBERTa-v3-base binary classifier distinguishing AI-generated from
+  human-written text. 99.65% test F1.
+base_url: https://157-230-241-156.sslip.io
+
+auth:
+  type: none
+
+endpoints:
+  - path: /predict
+    external_path: /predict
+    method: POST
+    description: Classify text as ai_generated or human_written with a confidence score.
+
+semantics:
+  signal_mapping:
+    label_field: label
+    confidence_field: confidence
+  supported_intents:
+    - AI_TEXT_DETECTION

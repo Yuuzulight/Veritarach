@@ -1,32 +1,34 @@
 # Registration
 
-`miner.yaml` in this directory is a stub. Three things are blocking it from being real, all
-waiting on responses in the Telegraph Protocol Discord:
+**Status: registered and active as of 2026-08-13.** `miner.yaml` follows the real schema
+published at `docs.telegraphprotocol.com/miners/yaml-config.md`. `miner.public.yaml` is the
+comment-free copy that actually got pinned to IPFS and registered — the YAML is public once
+submitted, so the internal working notes stay out of it.
 
-**1. Which Intent this hackathon actually accepts.** The general Telegraph docs list
-`AI_DETECTION` as a canonical Intent, but this hackathon uses a separate, curated Intent list
-that hasn't been published yet. It's possible `AI_DETECTION` isn't on it. If that happens,
-the classifier itself doesn't need to change — it's just a one-line swap in `miner.yaml` to
-`TEXT_AUTHENTICITY_CHECK` or `CONTENT_VERIFICATION`, the two closest fits on the general
-list, and re-registering. We're deliberately not asking about this directly in Discord and
-just waiting for the announcement, since it's expected to land on its own.
+What actually happened, in order:
 
-**2. Node address and internal secret.** YAML validation (`/miner-dispatcher/validate`)
-needs both, and neither has been requested yet. This needs asking for early, since it depends
-on someone responding — better to find out it's missing now than at registration time.
+1. Deployed the service to a DigitalOcean droplet (Singapore) behind Caddy for automatic
+   HTTPS — `base_url` in `miner.yaml` points at it, verified live (`/health` and `/predict`
+   both confirmed working over the public URL).
+2. Picked a random 6-digit `id` (708425) — no lookup endpoint exists to check availability in
+   advance, it's register-and-see.
+3. Went through **integrate.telegraphprotocol.com**'s 3-step flow: connected a wallet,
+   imported `miner.public.yaml`, it sandbox-tested the live `/predict` endpoint (passed),
+   pinned to IPFS via Pinata, then signed the `registerMiner` transaction on Base Sepolia.
+4. Cost was gas only — no bond, no stake, no MACHINA required to register, confirmed in both
+   the registration doc and `protocol/tokenomics.md` ("miners receive zero MACHINA from
+   emissions"). A few cents of Base Sepolia testnet ETH from a public faucet covered it.
+5. **Verified independently, not just the UI's success message** — checked the registering
+   wallet's transaction nonce incremented (proof a tx was actually included), then queried
+   the node's own `/miner-dispatcher/integrations` endpoint directly, which confirmed
+   `activation_status: "active"` for `veritarach-ai-text-detector`. Already active, ahead of
+   the "activates at next epoch boundary" the UI implied.
 
-**3. Where to get testnet MACHINA.** The 100 MACHINA registration bond is testnet-only (no
-real money involved), but unlike testnet ETH, there's no known faucet for it yet. Also
-unasked.
+`AI_TEXT_DETECTION` validated and registered without issue, despite `yaml-config.md`'s
+general canonical Intent list showing `AI_DETECTION` instead — that doc table just hadn't
+caught up with the hackathon-specific intents; no fallback to `TEXT_AUTHENTICITY_CHECK` was
+needed.
 
-A couple of smaller open questions that don't block registration outright but affect how
-Veritarach is built around it:
-
-- Whether `miner.yaml` needs an explicit Intent version suffix (`AI_DETECTION@v1.0`) or
-  defaults to latest — unconfirmed, needs checking before Phase 4.
-- Which response field carries the per-signal Explorer hash back to the caller — a partial
-  answer exists in Discord but not a definitive one. Worth rechecking once the Explorer
-  feature ships, since it affects how Veritarach should log its own requests/responses.
-
-Once the Discord answers land, update `miner.yaml` directly and remove the corresponding
-comment — no other file should need to change.
+There's no update function once registered — changing anything means
+`deregisterMiner(registrationId)` then `registerMiner(...)` again with a new YAML — but since
+there's no bond, that's cheap to do if it's ever needed.
