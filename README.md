@@ -1,18 +1,20 @@
 # Veritarach
 
 Veritarach is a fine-tuned DeBERTa-v3-base binary classifier that tells AI-generated text
-apart from human-written text. It's built to run as a Telegraph Protocol "Miner" serving the
-`AI_TEXT_DETECTION` intent, for Telegraph Hackathon Season 1 (Miner Track).
+apart from human-written text, deployed as a live, publicly reachable inference service.
 
-**Status: live.** The classifier hits 99.65% test F1 on a held-out split, is deployed as a
-real HTTPS service, and is registered and active as a Telegraph Miner. See Roadmap below.
+**Status: live.** 99.65% test F1 on a held-out split, deployed behind real HTTPS, and
+actively serving predictions. See Roadmap below.
+
+> Built as an entry for Telegraph Hackathon Season 1 — deployed as a Telegraph Protocol
+> "Miner" serving the `AI_TEXT_DETECTION` intent. See `registration/` for that integration.
 
 ## Why a fresh model instead of an existing detector
 
 There are already open detectors out there (`roberta-base-openai-detector` and similar), but
 they're tuned on GPT-2-era text and generalize poorly to what current-generation models
-produce. Since the hackathon's validator ground truth will most likely look like modern LLM
-output, Veritarach fine-tunes `microsoft/deberta-v3-base` from scratch on a mix of:
+produce. Since real-world ground truth is far more likely to look like modern LLM output,
+Veritarach fine-tunes `microsoft/deberta-v3-base` from scratch on a mix of:
 
 - **HC3** — paired human/ChatGPT answers to the same questions, which isolates writing style
   rather than topic.
