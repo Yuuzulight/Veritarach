@@ -48,7 +48,7 @@ class TestClaudeProvider:
     def test_generate_returns_response_text(self, mock_anthropic_cls, test_settings):
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="hello from claude")]
+        mock_response.content = [MagicMock(type="text", text="hello from claude")]
         mock_client.messages.create.return_value = mock_response
         mock_anthropic_cls.return_value = mock_client
 
@@ -61,7 +61,7 @@ class TestClaudeProvider:
     def test_generate_retries_on_rate_limit_then_succeeds(self, mock_anthropic_cls, mock_sleep, test_settings):
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="succeeded on retry")]
+        mock_response.content = [MagicMock(type="text", text="succeeded on retry")]
         mock_client.messages.create.side_effect = [_anthropic_rate_limit_error(), mock_response]
         mock_anthropic_cls.return_value = mock_client
 
@@ -88,7 +88,7 @@ class TestClaudeProvider:
     def test_generate_retries_on_overloaded_error_then_succeeds(self, mock_anthropic_cls, mock_sleep, test_settings):
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="succeeded on retry")]
+        mock_response.content = [MagicMock(type="text", text="succeeded on retry")]
         mock_client.messages.create.side_effect = [_anthropic_overloaded_error(), mock_response]
         mock_anthropic_cls.return_value = mock_client
 

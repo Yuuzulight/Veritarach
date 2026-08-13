@@ -24,8 +24,8 @@ def test_defaults_applied_when_only_keys_are_set(monkeypatch):
     settings = Settings(_env_file=None)
 
     assert settings.data_dir == Path("data")
-    assert settings.generation_budget_usd == 10.0
-    assert settings.claude_sample_count == 75
+    assert settings.generation_budget_usd == 15.0
+    assert settings.claude_sample_count == 500
     assert settings.gpt4o_sample_count == 75
     assert settings.gemini_sample_count == 150
     assert settings.paired_ratio == 0.7
@@ -33,7 +33,7 @@ def test_defaults_applied_when_only_keys_are_set(monkeypatch):
     assert settings.openai_model == "gpt-4o"
     assert settings.gemini_model == "gemini-flash-latest"
     assert settings.hc3_sample_limit is None
-    assert settings.wikipedia_sample_count == 500
+    assert settings.wikipedia_sample_count == 650
     assert settings.gemini_request_delay_seconds == 4.0
     assert settings.base_model == "microsoft/deberta-v3-base"
     assert settings.training_max_length == 256
