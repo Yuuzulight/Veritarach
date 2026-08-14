@@ -9,3 +9,19 @@ data/model/
 *.ckpt
 *.safetensors
 .DS_Store
+
+# Terraform -- state files and the pre-import droplet snapshot are a sensitive-data
+# risk independent of whether they happen to contain the DO token directly. tfvars and
+# tfplan files are included defensively too, even though neither exists yet -- a future
+# terraform.tfvars or a `plan -out=file` output are exactly the kind of files someone
+# could accidentally commit with real values in them.
+infra/terraform/droplet-snapshot.json
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/.terraform/
+infra/terraform/*.tfvars
+infra/terraform/*.tfvars.json
+infra/terraform/*.tfplan
+infra/terraform/crash.log
+infra/terraform/override.tf
+infra/terraform/override.tf.json
