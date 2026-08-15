@@ -6,7 +6,8 @@ protocol: generic
 name: Veritarach AI Text Detector
 description: >
   Fine-tuned DeBERTa-v3-base binary classifier distinguishing AI-generated from
-  human-written text. 99.65% test F1.
+  human-written text. 99.86% test F1 on held-out HC3/Wikipedia/self-generated data;
+  strongest on Q&A-style text similar to its training distribution.
 base_url: https://157-230-241-156.sslip.io
 
 auth:

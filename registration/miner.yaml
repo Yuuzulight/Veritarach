@@ -1,26 +1,33 @@
 # Real schema per docs.telegraphprotocol.com/miners/yaml-config.md (2026-08-13).
-# REGISTERED AND ACTIVE as of 2026-08-13 via integrate.telegraphprotocol.com -- confirmed
-# directly against the node's own /miner-dispatcher/integrations endpoint, not just the
-# UI's success message. See registration/README.md for the full flow.
+# REGISTERED AND ACTIVE as of 2026-08-15 -- on-chain registrationId 85, confirmed both via
+# a direct eth_call to getMiner(85) (active == true) and against the node's own
+# /api/miners catalog. Supersedes the original 2026-08-13 registration (registrationId 77,
+# now deregistered), retired once the retrained model's real F1 was confirmed to differ from
+# what that registration described. See registration/README.md for the full story, including
+# a broken step in Telegraph's own site that had to be routed around with a direct
+# registerMiner call.
 
 version: "1"
 kind: miner
-id: 708425                # Random 6-digit ID -- other miners we've seen in Discord examples
-                          # pick small sequential-looking numbers (18, 26, 34...), so a
-                          # random 6-digit number is a low-collision-risk choice. No lookup
-                          # endpoint exists to verify in advance -- register-and-see; if it
-                          # collides, the registration errors and we just pick a new one.
+id: 708425                # This repo's own application-level id, reused from the original
+                          # registration -- registerMiner doesn't take id or slug as contract
+                          # arguments at all (only yamlUrl, yamlHash, feeAddress,
+                          # minPriceUsdc, supportedIntents), so reusing it was never actually
+                          # at risk of an on-chain collision. Not the same number as the
+                          # on-chain registrationId (85) -- that's a separate, sequential
+                          # counter the contract assigns per registration.
 slug: veritarach-ai-text-detector
 protocol: generic        # not a Bittensor subnet wrapper -- our own FastAPI service.
 name: Veritarach AI Text Detector
 description: >
   Fine-tuned DeBERTa-v3-base binary classifier distinguishing AI-generated from
-  human-written text. 99.65% test F1.
+  human-written text. 99.86% test F1 on held-out HC3/Wikipedia/self-generated data;
+  strongest on Q&A-style text similar to its training distribution.
 base_url: https://157-230-241-156.sslip.io   # DigitalOcean droplet (Singapore), behind
                                               # Caddy for automatic HTTPS via a real
-                                              # Let's Encrypt cert. Verified live 2026-08-13:
-                                              # /health and /predict both confirmed working
-                                              # end-to-end over the public URL.
+                                              # Let's Encrypt cert. Retrained and redeployed
+                                              # 2026-08-15 -- verified live against real
+                                              # held-out rows, not just /health.
 
 auth:
   type: none              # /predict has no auth -- open endpoint.
