@@ -3,8 +3,22 @@
 Veritarach is a fine-tuned DeBERTa-v3-base binary classifier that tells AI-generated text
 apart from human-written text, deployed as a live, publicly reachable inference service.
 
-**Status: live.** 99.65% test F1 on a held-out split, deployed behind real HTTPS, and
+**Status: live.** 99.86% test F1 on a held-out split, deployed behind real HTTPS, and
 actively serving predictions. See Roadmap below.
+
+The first retrain on the 96.6k-row dataset silently produced a degenerate checkpoint —
+confidence never left roughly a 0.5-0.7 band even on completely unambiguous input, on a run
+whose metrics were never saved anywhere to catch it. Root cause: the GPU instance's driver
+only supported CUDA 12.4 while the pinned `torch` build defaulted to a CUDA 13 wheel, so
+`torch.cuda.is_available()` was silently `False` and training proceeded without ever actually
+using the GPU it thought it had. Retrained on an instance with a compatible driver and it
+converged normally (test_metrics.json and training_log.json now get written alongside every
+checkpoint specifically so this doesn't go unnoticed again). One real limitation the retrain
+didn't fix: the model discriminates its own training distribution (HC3-style Q&A, Wikipedia,
+the self-generated samples) very well, but confidently misclassifies AI-generated text in
+other registers — prose paragraphs, casual notes, anything that doesn't look like an HC3
+answer — as human-written. Worth treating the 99.86% figure as in-distribution performance,
+not general AI-text detection accuracy, until that gap gets addressed.
 
 > Built as an entry for Telegraph Hackathon Season 1 — deployed as a Telegraph Protocol
 > "Miner" serving the `AI_TEXT_DETECTION` intent. See `registration/` for that integration.
@@ -89,7 +103,8 @@ A `Dockerfile` is included for containerized deployment.
 
 1. **Data pipeline** — done. HC3 + Wikipedia + self-generated samples (Claude/GPT-4o/Gemini)
    assembled into a 96.6k-row training set.
-2. **Model training** — done. Fine-tuned on a rented cloud GPU; 99.65% test F1.
+2. **Model training** — done. Fine-tuned on a rented cloud GPU; 99.86% test F1, retrained
+   after the first attempt's driver/CUDA mismatch went undetected (see Status above).
 3. **Service** — done. FastAPI app with a real `/predict`, backed by the trained checkpoint.
 4. **Deployment** — done. Live on a DigitalOcean droplet behind Caddy, real HTTPS via Let's
    Encrypt.

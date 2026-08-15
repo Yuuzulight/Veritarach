@@ -32,3 +32,13 @@ needed.
 There's no update function once registered — changing anything means
 `deregisterMiner(registrationId)` then `registerMiner(...)` again with a new YAML — but since
 there's no bond, that's cheap to do if it's ever needed.
+
+**2026-08-15 note:** the model backing `base_url` has been retrained and redeployed since
+this registration. `miner.yaml`/`miner.public.yaml` still say 99.65% test F1 because that's
+what was actually pinned to IPFS and registered on-chain on 2026-08-13 — left as-is rather
+than edited, since these two files are meant to be an exact record of what got submitted, not
+a running status page. The live service's real current figure is 99.86% (see the main
+README's Status section), which is better on its own training distribution but has a
+documented generalization gap the earlier figure didn't have visibility into either. Worth a
+re-registration with updated YAML if that discrepancy matters for how the miner gets
+represented on-chain — not done here since it's a real transaction, not a docs update.
