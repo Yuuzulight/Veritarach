@@ -1,3 +1,4 @@
+import json
 import math
 from pathlib import Path
 
@@ -81,5 +82,13 @@ def train_model(
     final_dir = output_dir / "final"
     trainer.save_model(str(final_dir))
     tokenizer.save_pretrained(str(final_dir))
+
+    # Saved alongside the checkpoint on purpose -- the previous run's test metrics only
+    # ever went to a terminal (train_model.py's print()) and were never written down
+    # anywhere, so there was no way afterward to tell which run actually produced the
+    # deployed checkpoint, or whether training had converged normally. log_history has
+    # the full per-epoch train/eval loss and metric curve, not just the final number.
+    (final_dir / "test_metrics.json").write_text(json.dumps(test_metrics, indent=2), encoding="utf-8")
+    (final_dir / "training_log.json").write_text(json.dumps(trainer.state.log_history, indent=2), encoding="utf-8")
 
     return test_metrics

@@ -5,10 +5,20 @@ __pycache__/
 .pytest_cache/
 data/raw/
 data/generated/
-data/model/
+data/model/*
 *.ckpt
 *.safetensors
 .DS_Store
+
+# the checkpoint itself stays out of git (740MB, regenerable), but the metrics
+# that came out of training it are small and are exactly what needs to survive --
+# otherwise there's no way afterward to check a deployed checkpoint against what
+# training actually reported. (un-ignoring a file this deep needs every
+# intermediate directory un-ignored too, not just the file itself.)
+!data/model/final
+data/model/final/*
+!data/model/final/test_metrics.json
+!data/model/final/training_log.json
 
 # Terraform -- state files and the pre-import droplet snapshot are a sensitive-data
 # risk independent of whether they happen to contain the DO token directly. tfvars and
