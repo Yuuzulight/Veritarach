@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-RUN pip install --no-cache-dir uv
+RUN pip install --no-cache-dir --upgrade "pip>=26.2.2" && pip install --no-cache-dir "uv>=0.13.4"
 
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
