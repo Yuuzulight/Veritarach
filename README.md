@@ -1,10 +1,20 @@
 # Veritarach
 
 Veritarach is a fine-tuned DeBERTa-v3-base binary classifier that tells AI-generated text
-apart from human-written text, deployed as a live, publicly reachable inference service.
+apart from human-written text. It was deployed as a public inference service for Telegraph
+Hackathon Season 1; that deployment has been shut down.
 
-**Status: live.** 99.86% test F1 on a held-out split, deployed behind real HTTPS, and
-actively serving predictions. See Roadmap below.
+**Status: retired / decommissioned (9 Sep 2026).** The DigitalOcean droplet that served
+`/predict` was deleted after Hackathon 1 ended, so there is no live endpoint any more. The
+code, the data pipeline, the training pipeline, the `Dockerfile` and the results all remain
+in this repo. The Telegraph Miner registration is no longer active in practice: the on-chain
+entry (registrationId 85) was left in place, but the endpoint it points at no longer exists,
+so nothing is being served.
+
+> **Read the F1 figure with care.** The 99.86% test F1 is measured on a held-out split of
+> Veritarach's *own* training distribution only. It is not a general AI-text detection
+> accuracy. On Veracia's independent holdout, recall on the `ai_generated` class was **0.042**:
+> the model labels most unseen content as human-written, with 0.98+ confidence.
 
 The first retrain on the 96.6k-row dataset silently produced a degenerate checkpoint —
 confidence never left roughly a 0.5-0.7 band even on completely unambiguous input, on a run
@@ -17,11 +27,11 @@ checkpoint specifically so this doesn't go unnoticed again). One real limitation
 didn't fix: the model discriminates its own training distribution (HC3-style Q&A, Wikipedia,
 the self-generated samples) very well, but confidently misclassifies AI-generated text in
 other registers — prose paragraphs, casual notes, anything that doesn't look like an HC3
-answer — as human-written. Worth treating the 99.86% figure as in-distribution performance,
-not general AI-text detection accuracy, until that gap gets addressed.
+answer — as human-written. That gap was never addressed (see the note above).
 
-> Built as an entry for Telegraph Hackathon Season 1 — deployed as a Telegraph Protocol
-> "Miner" serving the `AI_TEXT_DETECTION` intent. See `registration/` for that integration.
+> Built as an entry for Telegraph Hackathon Season 1 — it ran as a Telegraph Protocol
+> "Miner" serving the `AI_TEXT_DETECTION` intent until the deployment was retired. See
+> `registration/` for that integration.
 
 ## Why a fresh model instead of an existing detector
 
@@ -97,17 +107,18 @@ curl -X POST localhost:8000/predict -H "content-type: application/json" \
 If no checkpoint is present, `/predict` returns 501 instead of crashing — that's the
 expected state in CI, since the trained weights are never committed.
 
-A `Dockerfile` is included for containerized deployment.
+A `Dockerfile` is included for containerized deployment. (The hosted instance that used it
+is gone; see Status.)
 
 ## Roadmap
 
 1. **Data pipeline** — done. HC3 + Wikipedia + self-generated samples (Claude/GPT-4o/Gemini)
    assembled into a 96.6k-row training set.
-2. **Model training** — done. Fine-tuned on a rented cloud GPU; 99.86% test F1, retrained
-   after the first attempt's driver/CUDA mismatch went undetected (see Status above).
+2. **Model training** — done. Fine-tuned on a rented cloud GPU; 99.86% test F1 (in-distribution
+   only, see Status), retrained after the first attempt's driver/CUDA mismatch went undetected.
 3. **Service** — done. FastAPI app with a real `/predict`, backed by the trained checkpoint.
-4. **Deployment** — done. Live on a DigitalOcean droplet behind Caddy, real HTTPS via Let's
-   Encrypt.
-5. **Protocol registration** — done. Registered as a Telegraph Miner for the
-   `AI_TEXT_DETECTION` intent and confirmed active. See `registration/README.md` for the
-   full flow.
+4. **Deployment** — done, then retired. Ran on a DigitalOcean droplet behind Caddy with HTTPS
+   via Let's Encrypt until the droplet was deleted on 9 Sep 2026, after Hackathon 1 ended.
+5. **Protocol registration** — done, no longer active. Registered as a Telegraph Miner for the
+   `AI_TEXT_DETECTION` intent and confirmed active at the time; the endpoint has since been
+   taken down. See `registration/README.md` for the full flow.

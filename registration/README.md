@@ -1,6 +1,9 @@
 # Registration
 
-**Status: registered and active as of 2026-08-15 (registrationId 85).** `miner.yaml` follows the real schema
+**Status: no longer active.** Registered and active as of 2026-08-15 (registrationId 85); the
+endpoint it points at was taken down on 2026-09-09 when the droplet was deleted, so it no
+longer serves anything. The on-chain entry itself was left in place. The notes below describe
+what happened while it was live. `miner.yaml` follows the real schema
 published at `docs.telegraphprotocol.com/miners/yaml-config.md`. `miner.public.yaml` is the
 comment-free copy that actually got pinned to IPFS and registered — the YAML is public once
 submitted, so the internal working notes stay out of it.
@@ -8,8 +11,8 @@ submitted, so the internal working notes stay out of it.
 What actually happened, in order:
 
 1. Deployed the service to a DigitalOcean droplet (Singapore) behind Caddy for automatic
-   HTTPS — `base_url` in `miner.yaml` points at it, verified live (`/health` and `/predict`
-   both confirmed working over the public URL).
+   HTTPS — `base_url` in `miner.yaml` pointed at it, verified live at the time (`/health` and
+   `/predict` both confirmed working over the public URL).
 2. Picked a random 6-digit `id` (708425) — no lookup endpoint exists to check availability in
    advance, it's register-and-see.
 3. Went through **integrate.telegraphprotocol.com**'s 3-step flow: connected a wallet,
